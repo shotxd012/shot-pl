@@ -19,6 +19,9 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class ServerAPI {
     private final ShotPL plugin;
@@ -64,67 +67,109 @@ public class ServerAPI {
         try {
             int port = plugin.getConfig().getInt("api.port", 8080);
             server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.setExecutor(Executors.newCachedThreadPool());
+            server.setExecutor(Executors.newFixedThreadPool(10));
 
             // Status endpoint
             server.createContext("/api/status", exchange -> {
-                if (!isAuthorized(exchange)) {
+                if (!checkAuth(exchange)) {
                     sendResponse(exchange, 401, "Unauthorized");
                     return;
                 }
 
-                JsonObject status = new JsonObject();
-                Server bukkitServer = Bukkit.getServer();
-                
-                // Basic server info
-                status.addProperty("server_name", bukkitServer.getName());
-                status.addProperty("version", bukkitServer.getVersion());
-                status.addProperty("online_players", bukkitServer.getOnlinePlayers().size());
-                status.addProperty("max_players", bukkitServer.getMaxPlayers());
-                status.addProperty("uptime", getUptime());
-                
-                // TPS
-                double currentTPS = tpsHistory[tpsIndex];
-                double averageTPS = (tpsHistory[0] + tpsHistory[1] + tpsHistory[2]) / 3.0;
-                
-                status.addProperty("tps_current", String.format("%.2f", currentTPS));
-                status.addProperty("tps_average", String.format("%.2f", averageTPS));
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendResponse(exchange, 405, "Method not allowed");
+                    return;
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("server_name", Bukkit.getServer().getName());
+                response.put("version", Bukkit.getServer().getVersion());
+                response.put("online_players", Bukkit.getOnlinePlayers().size());
+                response.put("max_players", Bukkit.getMaxPlayers());
+                response.put("uptime", System.currentTimeMillis() - plugin.getStartTime());
+                response.put("current_tps", tpsHistory[0]);
+                response.put("average_tps", (tpsHistory[0] + tpsHistory[1] + tpsHistory[2]) / 3);
                 
                 // Memory usage
                 Runtime runtime = Runtime.getRuntime();
-                status.addProperty("memory_used", (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024);
-                status.addProperty("memory_max", runtime.maxMemory() / 1024 / 1024);
-                
-                // Online players list with stats
-                JsonObject players = new JsonObject();
-                for (Player player : bukkitServer.getOnlinePlayers()) {
-                    JsonObject playerInfo = new JsonObject();
-                    playerInfo.addProperty("name", player.getName());
-                    playerInfo.addProperty("uuid", player.getUniqueId().toString());
-                    playerInfo.addProperty("health", player.getHealth());
-                    playerInfo.addProperty("ping", player.getPing());
-                    playerInfo.addProperty("gamemode", player.getGameMode().toString());
-                    playerInfo.addProperty("location", String.format("%.2f, %.2f, %.2f", 
-                        player.getLocation().getX(),
-                        player.getLocation().getY(),
-                        player.getLocation().getZ()));
-                    
-                    // Add player stats
-                    Map<String, Object> stats = plugin.getDatabaseManager().getPlayerStats(player.getUniqueId());
-                    playerInfo.addProperty("total_playtime", (Long) stats.getOrDefault("total_playtime", 0L));
-                    playerInfo.addProperty("first_join", stats.get("first_join") != null ? 
-                        ((Timestamp) stats.get("first_join")).toString() : null);
-                    
-                    players.add(player.getUniqueId().toString(), playerInfo);
+                response.put("memory_used", (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024);
+                response.put("memory_max", runtime.maxMemory() / 1024 / 1024);
+
+                // Online players
+                List<Map<String, Object>> players = new ArrayList<>();
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    Map<String, Object> playerInfo = new HashMap<>();
+                    playerInfo.put("name", player.getName());
+                    playerInfo.put("uuid", player.getUniqueId().toString());
+                    playerInfo.put("health", player.getHealth());
+                    playerInfo.put("game_mode", player.getGameMode().toString());
+                    playerInfo.put("ping", player.getPing());
+                    players.add(playerInfo);
                 }
-                status.add("players", players);
-                
-                sendResponse(exchange, 200, gson.toJson(status));
+                response.put("players", players);
+
+                sendResponse(exchange, 200, gson.toJson(response));
+            });
+
+            // Player info endpoint
+            server.createContext("/api/player/", exchange -> {
+                if (!checkAuth(exchange)) {
+                    sendResponse(exchange, 401, "Unauthorized");
+                    return;
+                }
+
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendResponse(exchange, 405, "Method not allowed");
+                    return;
+                }
+
+                String path = exchange.getRequestURI().getPath();
+                String playerName = path.substring("/api/player/".length());
+                Player player = Bukkit.getPlayer(playerName);
+
+                if (player == null) {
+                    sendResponse(exchange, 404, "Player not found");
+                    return;
+                }
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("name", player.getName());
+                response.put("uuid", player.getUniqueId().toString());
+                response.put("health", player.getHealth());
+                response.put("max_health", player.getMaxHealth());
+                response.put("game_mode", player.getGameMode().toString());
+                response.put("ping", player.getPing());
+                response.put("location", Arrays.asList(
+                    player.getLocation().getX(),
+                    player.getLocation().getY(),
+                    player.getLocation().getZ()
+                ));
+
+                // Add player stats from database
+                response.putAll(plugin.getDatabaseManager().getPlayerStats(player.getUniqueId()));
+
+                sendResponse(exchange, 200, gson.toJson(response));
+            });
+
+            // All players data endpoint
+            server.createContext("/api/players", exchange -> {
+                if (!checkAuth(exchange)) {
+                    sendResponse(exchange, 401, "Unauthorized");
+                    return;
+                }
+
+                if (!"GET".equals(exchange.getRequestMethod())) {
+                    sendResponse(exchange, 405, "Method not allowed");
+                    return;
+                }
+
+                List<Map<String, Object>> playersData = plugin.getDatabaseManager().getAllPlayersData();
+                sendResponse(exchange, 200, gson.toJson(playersData));
             });
 
             // Player stats endpoint
             server.createContext("/api/player/stats/", exchange -> {
-                if (!isAuthorized(exchange)) {
+                if (!checkAuth(exchange)) {
                     sendResponse(exchange, 401, "Unauthorized");
                     return;
                 }
@@ -147,7 +192,7 @@ public class ServerAPI {
 
             // Player achievements endpoint
             server.createContext("/api/player/achievements/", exchange -> {
-                if (!isAuthorized(exchange)) {
+                if (!checkAuth(exchange)) {
                     sendResponse(exchange, 401, "Unauthorized");
                     return;
                 }
@@ -180,13 +225,14 @@ public class ServerAPI {
         }
     }
 
-    private boolean isAuthorized(HttpExchange exchange) {
-        boolean authEnabled = plugin.getConfig().getBoolean("api.auth.enabled", false);
-        if (!authEnabled) return true;
+    private boolean checkAuth(HttpExchange exchange) {
+        String apiKey = plugin.getConfig().getString("api.key");
+        if (apiKey == null || apiKey.isEmpty()) {
+            return true;
+        }
 
         String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
-        String token = plugin.getConfig().getString("api.auth.token", "");
-        return authHeader != null && authHeader.equals("Bearer " + token);
+        return authHeader != null && authHeader.equals("Bearer " + apiKey);
     }
 
     private void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {

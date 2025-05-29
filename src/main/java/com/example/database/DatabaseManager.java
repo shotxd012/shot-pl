@@ -3,15 +3,12 @@ package com.example.database;
 import com.example.ShotPL;
 import org.bukkit.entity.Player;
 
-import java.io.File;
 import java.sql.*;
 import java.util.*;
-import java.util.logging.Level;
 
 public class DatabaseManager {
     private final ShotPL plugin;
     private Connection connection;
-    private final Map<UUID, Long> playerLoginTimes = new HashMap<>();
 
     public DatabaseManager(ShotPL plugin) {
         this.plugin = plugin;
@@ -20,178 +17,172 @@ public class DatabaseManager {
 
     private void initializeDatabase() {
         try {
-            File dataFolder = plugin.getDataFolder();
-            if (!dataFolder.exists()) {
-                dataFolder.mkdirs();
-            }
-
-            File dbFile = new File(dataFolder, "playerdata.db");
-            connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
-
+            Class.forName("org.sqlite.JDBC");
+            connection = DriverManager.getConnection("jdbc:sqlite:" + plugin.getDataFolder() + "/player_data.db");
+            
             // Create tables if they don't exist
             try (Statement stmt = connection.createStatement()) {
-                // Players table
-                stmt.execute("""
-                    CREATE TABLE IF NOT EXISTS players (
-                        uuid TEXT PRIMARY KEY,
-                        username TEXT NOT NULL,
-                        first_join TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        total_playtime INTEGER DEFAULT 0
-                    )
-                """);
+                // Player sessions table
+                stmt.execute("CREATE TABLE IF NOT EXISTS player_sessions (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "player_uuid TEXT NOT NULL," +
+                    "player_name TEXT NOT NULL," +
+                    "login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "logout_time TIMESTAMP," +
+                    "session_duration INTEGER DEFAULT 0" +
+                    ")");
 
-                // Login history table
-                stmt.execute("""
-                    CREATE TABLE IF NOT EXISTS login_history (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        uuid TEXT NOT NULL,
-                        login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        logout_time TIMESTAMP,
-                        session_duration INTEGER,
-                        FOREIGN KEY (uuid) REFERENCES players(uuid)
-                    )
-                """);
-
-                // Achievements table
-                stmt.execute("""
-                    CREATE TABLE IF NOT EXISTS achievements (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        uuid TEXT NOT NULL,
-                        achievement_id TEXT NOT NULL,
-                        achieved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        progress INTEGER DEFAULT 0,
-                        completed BOOLEAN DEFAULT FALSE,
-                        FOREIGN KEY (uuid) REFERENCES players(uuid)
-                    )
-                """);
+                // Player achievements table
+                stmt.execute("CREATE TABLE IF NOT EXISTS player_achievements (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "player_uuid TEXT NOT NULL," +
+                    "achievement_id TEXT NOT NULL," +
+                    "progress INTEGER DEFAULT 0," +
+                    "completed BOOLEAN DEFAULT FALSE," +
+                    "completed_at TIMESTAMP," +
+                    "UNIQUE(player_uuid, achievement_id)" +
+                    ")");
             }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to initialize database", e);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
         }
     }
 
     public void recordPlayerLogin(Player player) {
-        UUID uuid = player.getUniqueId();
-        playerLoginTimes.put(uuid, System.currentTimeMillis());
-
-        try {
-            // Update or insert player record
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "INSERT OR REPLACE INTO players (uuid, username, last_seen) VALUES (?, ?, CURRENT_TIMESTAMP)")) {
-                ps.setString(1, uuid.toString());
-                ps.setString(2, player.getName());
-                ps.executeUpdate();
-            }
-
-            // Record login
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO login_history (uuid, login_time) VALUES (?, CURRENT_TIMESTAMP)")) {
-                ps.setString(1, uuid.toString());
-                ps.executeUpdate();
-            }
+        String sql = "INSERT INTO player_sessions (player_uuid, player_name) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.setString(2, player.getName());
+            pstmt.executeUpdate();
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to record player login", e);
+            plugin.getLogger().severe("Failed to record player login: " + e.getMessage());
         }
     }
 
     public void recordPlayerLogout(Player player) {
-        UUID uuid = player.getUniqueId();
-        Long loginTime = playerLoginTimes.remove(uuid);
-        if (loginTime == null) return;
-
-        long sessionDuration = System.currentTimeMillis() - loginTime;
-
-        try {
-            // Update last login record
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "UPDATE login_history SET logout_time = CURRENT_TIMESTAMP, session_duration = ? " +
-                    "WHERE uuid = ? AND logout_time IS NULL ORDER BY login_time DESC LIMIT 1")) {
-                ps.setLong(1, sessionDuration);
-                ps.setString(2, uuid.toString());
-                ps.executeUpdate();
-            }
-
-            // Update total playtime
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "UPDATE players SET total_playtime = total_playtime + ? WHERE uuid = ?")) {
-                ps.setLong(1, sessionDuration);
-                ps.setString(2, uuid.toString());
-                ps.executeUpdate();
-            }
+        String sql = "UPDATE player_sessions SET logout_time = CURRENT_TIMESTAMP, " +
+                    "session_duration = (strftime('%s', CURRENT_TIMESTAMP) - strftime('%s', login_time)) * 1000 " +
+                    "WHERE player_uuid = ? AND logout_time IS NULL " +
+                    "ORDER BY login_time DESC LIMIT 1";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.executeUpdate();
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to record player logout", e);
+            plugin.getLogger().severe("Failed to record player logout: " + e.getMessage());
         }
     }
 
-    public Map<String, Object> getPlayerStats(UUID uuid) {
+    public Map<String, Object> getPlayerStats(UUID playerUuid) {
         Map<String, Object> stats = new HashMap<>();
-        try {
-            // Get basic player info
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "SELECT username, first_join, last_seen, total_playtime FROM players WHERE uuid = ?")) {
-                ps.setString(1, uuid.toString());
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    stats.put("username", rs.getString("username"));
-                    stats.put("first_join", rs.getTimestamp("first_join"));
-                    stats.put("last_seen", rs.getTimestamp("last_seen"));
-                    stats.put("total_playtime", rs.getLong("total_playtime"));
-                }
+        
+        // Get total playtime
+        String playtimeSql = "SELECT SUM(session_duration) as total_playtime, " +
+                           "MIN(login_time) as first_join " +
+                           "FROM player_sessions " +
+                           "WHERE player_uuid = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(playtimeSql)) {
+            pstmt.setString(1, playerUuid.toString());
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                stats.put("total_playtime", rs.getLong("total_playtime"));
+                stats.put("first_join", rs.getString("first_join"));
             }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get player playtime: " + e.getMessage());
+        }
 
-            // Get login history
-            List<Map<String, Object>> loginHistory = new ArrayList<>();
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "SELECT login_time, logout_time, session_duration FROM login_history WHERE uuid = ? ORDER BY login_time DESC LIMIT 10")) {
-                ps.setString(1, uuid.toString());
-                ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    Map<String, Object> login = new HashMap<>();
-                    login.put("login_time", rs.getTimestamp("login_time"));
-                    login.put("logout_time", rs.getTimestamp("logout_time"));
-                    login.put("session_duration", rs.getLong("session_duration"));
-                    loginHistory.add(login);
-                }
+        // Get recent sessions
+        String sessionsSql = "SELECT login_time, logout_time, session_duration " +
+                           "FROM player_sessions " +
+                           "WHERE player_uuid = ? " +
+                           "ORDER BY login_time DESC LIMIT 3";
+        try (PreparedStatement pstmt = connection.prepareStatement(sessionsSql)) {
+            pstmt.setString(1, playerUuid.toString());
+            ResultSet rs = pstmt.executeQuery();
+            List<Map<String, Object>> sessions = new ArrayList<>();
+            while (rs.next()) {
+                Map<String, Object> session = new HashMap<>();
+                session.put("login_time", rs.getString("login_time"));
+                session.put("logout_time", rs.getString("logout_time"));
+                session.put("session_duration", rs.getLong("session_duration"));
+                sessions.add(session);
             }
-            stats.put("login_history", loginHistory);
+            stats.put("login_history", sessions);
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get player sessions: " + e.getMessage());
+        }
 
-            // Get achievements
+        // Get achievements
+        String achievementsSql = "SELECT achievement_id, progress, completed, completed_at " +
+                               "FROM player_achievements " +
+                               "WHERE player_uuid = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(achievementsSql)) {
+            pstmt.setString(1, playerUuid.toString());
+            ResultSet rs = pstmt.executeQuery();
             List<Map<String, Object>> achievements = new ArrayList<>();
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "SELECT achievement_id, achieved_at, progress, completed FROM achievements WHERE uuid = ?")) {
-                ps.setString(1, uuid.toString());
-                ResultSet rs = ps.executeQuery();
-                while (rs.next()) {
-                    Map<String, Object> achievement = new HashMap<>();
-                    achievement.put("id", rs.getString("achievement_id"));
-                    achievement.put("achieved_at", rs.getTimestamp("achieved_at"));
-                    achievement.put("progress", rs.getInt("progress"));
-                    achievement.put("completed", rs.getBoolean("completed"));
-                    achievements.add(achievement);
-                }
+            while (rs.next()) {
+                Map<String, Object> achievement = new HashMap<>();
+                achievement.put("id", rs.getString("achievement_id"));
+                achievement.put("progress", rs.getInt("progress"));
+                achievement.put("completed", rs.getBoolean("completed"));
+                achievement.put("completed_at", rs.getString("completed_at"));
+                achievements.add(achievement);
             }
             stats.put("achievements", achievements);
-
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to get player stats", e);
+            plugin.getLogger().severe("Failed to get player achievements: " + e.getMessage());
         }
+
         return stats;
     }
 
-    public void awardAchievement(UUID uuid, String achievementId, int progress, boolean completed) {
-        try {
-            try (PreparedStatement ps = connection.prepareStatement(
-                    "INSERT OR REPLACE INTO achievements (uuid, achievement_id, progress, completed) VALUES (?, ?, ?, ?)")) {
-                ps.setString(1, uuid.toString());
-                ps.setString(2, achievementId);
-                ps.setInt(3, progress);
-                ps.setBoolean(4, completed);
-                ps.executeUpdate();
+    public List<Map<String, Object>> getAllPlayersData() {
+        List<Map<String, Object>> playersData = new ArrayList<>();
+        
+        String sql = "SELECT DISTINCT player_uuid, player_name, " +
+                    "(SELECT SUM(session_duration) FROM player_sessions WHERE player_uuid = ps.player_uuid) as total_playtime, " +
+                    "(SELECT MIN(login_time) FROM player_sessions WHERE player_uuid = ps.player_uuid) as first_join, " +
+                    "(SELECT COUNT(*) FROM player_achievements WHERE player_uuid = ps.player_uuid AND completed = 1) as completed_achievements " +
+                    "FROM player_sessions ps " +
+                    "ORDER BY total_playtime DESC";
+        
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            while (rs.next()) {
+                Map<String, Object> playerData = new HashMap<>();
+                playerData.put("uuid", rs.getString("player_uuid"));
+                playerData.put("name", rs.getString("player_name"));
+                playerData.put("total_playtime", rs.getLong("total_playtime"));
+                playerData.put("first_join", rs.getString("first_join"));
+                playerData.put("completed_achievements", rs.getInt("completed_achievements"));
+                
+                // Get recent sessions
+                String sessionsSql = "SELECT login_time, logout_time, session_duration " +
+                                   "FROM player_sessions " +
+                                   "WHERE player_uuid = ? " +
+                                   "ORDER BY login_time DESC LIMIT 3";
+                try (PreparedStatement pstmt = connection.prepareStatement(sessionsSql)) {
+                    pstmt.setString(1, rs.getString("player_uuid"));
+                    ResultSet sessionsRs = pstmt.executeQuery();
+                    List<Map<String, Object>> sessions = new ArrayList<>();
+                    while (sessionsRs.next()) {
+                        Map<String, Object> session = new HashMap<>();
+                        session.put("login_time", sessionsRs.getString("login_time"));
+                        session.put("logout_time", sessionsRs.getString("logout_time"));
+                        session.put("session_duration", sessionsRs.getLong("session_duration"));
+                        sessions.add(session);
+                    }
+                    playerData.put("recent_sessions", sessions);
+                }
+                
+                playersData.add(playerData);
             }
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to award achievement", e);
+            plugin.getLogger().severe("Failed to get all players data: " + e.getMessage());
         }
+        
+        return playersData;
     }
 
     public void close() {
@@ -200,7 +191,7 @@ public class DatabaseManager {
                 connection.close();
             }
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "Failed to close database connection", e);
+            plugin.getLogger().severe("Failed to close database connection: " + e.getMessage());
         }
     }
 } 
