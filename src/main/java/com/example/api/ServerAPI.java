@@ -11,17 +11,37 @@ import java.util.Map;
 import java.util.UUID;
 import com.example.ShotPL;
 import org.bukkit.Server;
-import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
 
 public class ServerAPI {
     private final ShotPL plugin;
     private final Gson gson;
     private long startTime;
+    private long lastTickTime;
+    private double[] tpsHistory;
+    private int tpsIndex;
 
     public ServerAPI(ShotPL plugin) {
         this.plugin = plugin;
         this.gson = new Gson();
         this.startTime = System.currentTimeMillis();
+        this.lastTickTime = startTime;
+        this.tpsHistory = new double[3]; // Store last 3 TPS measurements
+        this.tpsIndex = 0;
+        
+        // Start TPS monitoring task
+        Bukkit.getScheduler().runTaskTimer(plugin, this::updateTPS, 20L, 20L);
+    }
+
+    private void updateTPS() {
+        long currentTime = System.currentTimeMillis();
+        long timeSpent = currentTime - lastTickTime;
+        double tps = 1000.0 / timeSpent;
+        
+        // Update TPS history
+        tpsHistory[tpsIndex] = tps;
+        tpsIndex = (tpsIndex + 1) % tpsHistory.length;
+        
+        lastTickTime = currentTime;
     }
 
     public void start() {
@@ -55,16 +75,9 @@ public class ServerAPI {
             status.addProperty("uptime", getUptime());
             
             // TPS (Ticks Per Second)
-            if (server instanceof CraftServer) {
-                double[] tps = ((CraftServer) server).getServer().getAverageTickTime();
-                status.addProperty("tps_1m", String.format("%.2f", 1000.0 / tps[0]));
-                status.addProperty("tps_5m", String.format("%.2f", 1000.0 / tps[1]));
-                status.addProperty("tps_15m", String.format("%.2f", 1000.0 / tps[2]));
-            } else {
-                status.addProperty("tps_1m", "N/A");
-                status.addProperty("tps_5m", "N/A");
-                status.addProperty("tps_15m", "N/A");
-            }
+            status.addProperty("tps_current", String.format("%.2f", tpsHistory[tpsIndex]));
+            status.addProperty("tps_average", String.format("%.2f", 
+                (tpsHistory[0] + tpsHistory[1] + tpsHistory[2]) / 3.0));
             
             // Memory usage
             Runtime runtime = Runtime.getRuntime();
