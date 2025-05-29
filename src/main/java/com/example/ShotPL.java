@@ -18,14 +18,22 @@ public class ShotPL extends JavaPlugin implements Listener {
     private ServerAPI api;
     private DatabaseManager databaseManager;
     private StatsGUI statsGUI;
+    private long startTime;
 
     @Override
     public void onEnable() {
         // Save default config
         saveDefaultConfig();
 
+        // Initialize start time
+        startTime = System.currentTimeMillis();
+
         // Initialize database
         databaseManager = new DatabaseManager(this);
+
+        // Initialize API server
+        api = new ServerAPI(this);
+        api.start();
 
         // Initialize GUI
         statsGUI = new StatsGUI(this);
@@ -36,12 +44,6 @@ public class ShotPL extends JavaPlugin implements Listener {
         // Register commands
         getCommand("stats").setExecutor(new StatsCommand(this));
         getCommand("leaderboard").setExecutor(new LeaderboardCommand(this));
-
-        // Start API server if enabled
-        if (getConfig().getBoolean("api.enabled", true)) {
-            api = new ServerAPI(this);
-            api.start();
-        }
 
         // Log startup message
         getLogger().info("§a§lShot-PL §7» §fPlugin has been enabled!");
@@ -104,5 +106,9 @@ public class ShotPL extends JavaPlugin implements Listener {
 
     public StatsGUI getStatsGUI() {
         return statsGUI;
+    }
+
+    public long getStartTime() {
+        return startTime;
     }
 } 
