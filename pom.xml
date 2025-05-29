@@ -31,12 +31,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.sparkjava</groupId>
-            <artifactId>spark-core</artifactId>
-            <version>2.9.4</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
@@ -68,10 +62,6 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <relocations>
-                                <relocation>
-                                    <pattern>spark</pattern>
-                                    <shadedPattern>com.example.shotpl.spark</shadedPattern>
-                                </relocation>
                                 <relocation>
                                     <pattern>com.google.gson</pattern>
                                     <shadedPattern>com.example.shotpl.gson</shadedPattern>
