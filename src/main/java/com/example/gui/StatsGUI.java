@@ -95,9 +95,14 @@ public class StatsGUI {
             List<String> lore = new ArrayList<>();
             for (Map<String, Object> achievement : achievements) {
                 String achievementId = achievement.get("id").toString();
-                String progress = Boolean.TRUE.equals(achievement.get("completed")) ? 
-                    ChatColor.GREEN + "Completed" : 
-                    ChatColor.YELLOW + achievement.get("progress") + "%";
+                Object progressObj = achievement.get("completed");
+                String progress;
+                if (Boolean.TRUE.equals(progressObj)) {
+                    progress = ChatColor.GREEN + "Completed";
+                } else {
+                    Object progressValue = achievement.get("progress");
+                    progress = ChatColor.YELLOW + (progressValue != null ? progressValue.toString() : "0") + "%";
+                }
                 lore.add(ChatColor.GRAY + "• " + achievementId + " - " + progress);
             }
             meta.setLore(lore);
