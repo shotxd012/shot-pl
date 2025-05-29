@@ -5,11 +5,19 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.ChatColor;
+import org.bukkit.configuration.file.FileConfiguration;
 
 public class ShotPL extends JavaPlugin implements Listener {
     
+    private FileConfiguration config;
+    
     @Override
     public void onEnable() {
+        // Save default config if it doesn't exist
+        saveDefaultConfig();
+        // Load config
+        config = getConfig();
+        
         // Register events
         getServer().getPluginManager().registerEvents(this, this);
         
@@ -31,7 +39,17 @@ public class ShotPL extends JavaPlugin implements Listener {
     
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // Send a welcome message when a player joins
-        event.getPlayer().sendMessage("§b§lShot-PL §7» §fWelcome to Shot-PL server!");
+        // Check if welcome message is enabled
+        if (config.getBoolean("welcome.enabled", true)) {
+            // Get the welcome message from config
+            String message = config.getString("welcome.message", "§b§lShot-PL §7» §fWelcome to Shot-PL server!");
+            
+            // Replace placeholders
+            message = message.replace("{player}", event.getPlayer().getName())
+                           .replace("{server}", getServer().getName());
+            
+            // Send the message
+            event.getPlayer().sendMessage(message);
+        }
     }
 } 

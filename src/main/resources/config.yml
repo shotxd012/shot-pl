@@ -1,0 +1,11 @@
+# Shot-PL Configuration
+
+# Welcome message settings
+welcome:
+  # Enable or disable the welcome message
+  enabled: true
+  # The welcome message that will be shown to players when they join
+  # Available placeholders:
+  # {player} - Player's name
+  # {server} - Server name
+  message: "§b§lShot-PL §7» §fWelcome {player} to Shot-PL server!" 
