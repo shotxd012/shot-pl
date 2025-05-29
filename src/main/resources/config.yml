@@ -8,7 +8,7 @@ welcome:
   # Available placeholders:
   # {player} - Player's name
   # {server} - Server name
-  message: "§b§lShot-PL §7» §fWelcome {player} to Shot-PL server!"
+  message: "§b§lShot-PL §7» §fWelcome {player} to the server!"
 
 # API settings
 api:

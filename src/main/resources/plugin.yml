@@ -3,4 +3,4 @@ version: '${project.version}'
 main: com.example.ShotPL
 api-version: '1.20'
 description: A Minecraft plugin for shot-pl
-author: YourName 
+author: SHOTXD 

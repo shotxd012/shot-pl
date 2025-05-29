@@ -17,21 +17,24 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerAPI {
     private final ShotPL plugin;
     private final Gson gson;
     private long startTime;
-    private long lastTickTime;
-    private double[] tpsHistory;
+    private final AtomicInteger tickCount;
+    private final double[] tpsHistory;
     private int tpsIndex;
     private HttpServer server;
+    private long lastTickTime;
 
     public ServerAPI(ShotPL plugin) {
         this.plugin = plugin;
         this.gson = new Gson();
         this.startTime = System.currentTimeMillis();
         this.lastTickTime = startTime;
+        this.tickCount = new AtomicInteger(0);
         this.tpsHistory = new double[3];
         this.tpsIndex = 0;
         
@@ -42,7 +45,13 @@ public class ServerAPI {
     private void updateTPS() {
         long currentTime = System.currentTimeMillis();
         long timeSpent = currentTime - lastTickTime;
-        double tps = 1000.0 / timeSpent;
+        int ticks = tickCount.getAndSet(0);
+        
+        // Calculate TPS based on actual ticks
+        double tps = (ticks * 1000.0) / timeSpent;
+        
+        // Ensure TPS is within reasonable bounds (0-20)
+        tps = Math.min(20.0, Math.max(0.0, tps));
         
         tpsHistory[tpsIndex] = tps;
         tpsIndex = (tpsIndex + 1) % tpsHistory.length;
@@ -74,9 +83,11 @@ public class ServerAPI {
                 status.addProperty("uptime", getUptime());
                 
                 // TPS
-                status.addProperty("tps_current", String.format("%.2f", tpsHistory[tpsIndex]));
-                status.addProperty("tps_average", String.format("%.2f", 
-                    (tpsHistory[0] + tpsHistory[1] + tpsHistory[2]) / 3.0));
+                double currentTPS = tpsHistory[tpsIndex];
+                double averageTPS = (tpsHistory[0] + tpsHistory[1] + tpsHistory[2]) / 3.0;
+                
+                status.addProperty("tps_current", String.format("%.2f", currentTPS));
+                status.addProperty("tps_average", String.format("%.2f", averageTPS));
                 
                 // Memory usage
                 Runtime runtime = Runtime.getRuntime();
@@ -136,6 +147,9 @@ public class ServerAPI {
                     sendResponse(exchange, 400, gson.toJson(Map.of("error", "Invalid UUID format")));
                 }
             });
+
+            // Start tick counter
+            Bukkit.getScheduler().runTaskTimer(plugin, () -> tickCount.incrementAndGet(), 1L, 1L);
 
             server.start();
             plugin.getLogger().info("§aAPI server started on port " + port);
