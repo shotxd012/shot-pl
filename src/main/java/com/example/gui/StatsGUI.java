@@ -71,7 +71,7 @@ public class StatsGUI {
         addStatItem(gui, 38, Material.DIAMOND_BOOTS, "Jumps",
             String.valueOf(target.getStatistic(Statistic.JUMP)));
         addStatItem(gui, 39, Material.ENDER_PEARL, "Teleports",
-            String.valueOf(target.getStatistic(Statistic.ENDER_PEARL_THROWN)));
+            String.valueOf(target.getStatistic(Statistic.USE_ITEM)));
         addStatItem(gui, 40, Material.OAK_BOAT, "Boats Used",
             String.valueOf(target.getStatistic(Statistic.BOAT_ONE_CM) / 100));
 
@@ -83,13 +83,13 @@ public class StatsGUI {
         addStatItem(gui, 48, Material.CHEST, "Items Crafted",
             String.valueOf(target.getStatistic(Statistic.CRAFT_ITEM)));
         addStatItem(gui, 49, Material.FURNACE, "Items Smelted",
-            String.valueOf(target.getStatistic(Statistic.FURNACE_USE)));
+            String.valueOf(target.getStatistic(Statistic.USE_ITEM)));
 
         // Achievements
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> achievements = (List<Map<String, Object>>) stats.get("achievements");
         if (achievements != null && !achievements.isEmpty()) {
-            ItemStack achievementItem = new ItemStack(Material.GOLDEN_CROWN);
+            ItemStack achievementItem = new ItemStack(Material.GOLD_INGOT);
             ItemMeta meta = achievementItem.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + "Achievements");
             List<String> lore = new ArrayList<>();
