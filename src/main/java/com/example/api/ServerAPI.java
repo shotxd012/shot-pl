@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.sql.Timestamp;
 
 public class ServerAPI {
     private final ShotPL plugin;
@@ -94,7 +95,7 @@ public class ServerAPI {
                 status.addProperty("memory_used", (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024);
                 status.addProperty("memory_max", runtime.maxMemory() / 1024 / 1024);
                 
-                // Online players list
+                // Online players list with stats
                 JsonObject players = new JsonObject();
                 for (Player player : bukkitServer.getOnlinePlayers()) {
                     JsonObject playerInfo = new JsonObject();
@@ -107,6 +108,13 @@ public class ServerAPI {
                         player.getLocation().getX(),
                         player.getLocation().getY(),
                         player.getLocation().getZ()));
+                    
+                    // Add player stats
+                    Map<String, Object> stats = plugin.getDatabaseManager().getPlayerStats(player.getUniqueId());
+                    playerInfo.addProperty("total_playtime", (Long) stats.getOrDefault("total_playtime", 0L));
+                    playerInfo.addProperty("first_join", stats.get("first_join") != null ? 
+                        ((Timestamp) stats.get("first_join")).toString() : null);
+                    
                     players.add(player.getUniqueId().toString(), playerInfo);
                 }
                 status.add("players", players);
@@ -114,35 +122,49 @@ public class ServerAPI {
                 sendResponse(exchange, 200, gson.toJson(status));
             });
 
-            // Player info endpoint
-            server.createContext("/api/player/", exchange -> {
+            // Player stats endpoint
+            server.createContext("/api/player/stats/", exchange -> {
                 if (!isAuthorized(exchange)) {
                     sendResponse(exchange, 401, "Unauthorized");
                     return;
                 }
 
                 String path = exchange.getRequestURI().getPath();
-                String uuid = path.substring("/api/player/".length());
+                String uuid = path.substring("/api/player/stats/".length());
                 
                 try {
-                    Player player = Bukkit.getPlayer(UUID.fromString(uuid));
-                    if (player == null) {
+                    Map<String, Object> stats = plugin.getDatabaseManager().getPlayerStats(UUID.fromString(uuid));
+                    if (stats.isEmpty()) {
                         sendResponse(exchange, 404, gson.toJson(Map.of("error", "Player not found")));
                         return;
                     }
                     
-                    JsonObject playerInfo = new JsonObject();
-                    playerInfo.addProperty("name", player.getName());
-                    playerInfo.addProperty("uuid", player.getUniqueId().toString());
-                    playerInfo.addProperty("health", player.getHealth());
-                    playerInfo.addProperty("ping", player.getPing());
-                    playerInfo.addProperty("gamemode", player.getGameMode().toString());
-                    playerInfo.addProperty("location", String.format("%.2f, %.2f, %.2f", 
-                        player.getLocation().getX(),
-                        player.getLocation().getY(),
-                        player.getLocation().getZ()));
+                    sendResponse(exchange, 200, gson.toJson(stats));
+                } catch (IllegalArgumentException e) {
+                    sendResponse(exchange, 400, gson.toJson(Map.of("error", "Invalid UUID format")));
+                }
+            });
+
+            // Player achievements endpoint
+            server.createContext("/api/player/achievements/", exchange -> {
+                if (!isAuthorized(exchange)) {
+                    sendResponse(exchange, 401, "Unauthorized");
+                    return;
+                }
+
+                String path = exchange.getRequestURI().getPath();
+                String uuid = path.substring("/api/player/achievements/".length());
+                
+                try {
+                    Map<String, Object> stats = plugin.getDatabaseManager().getPlayerStats(UUID.fromString(uuid));
+                    if (stats.isEmpty()) {
+                        sendResponse(exchange, 404, gson.toJson(Map.of("error", "Player not found")));
+                        return;
+                    }
                     
-                    sendResponse(exchange, 200, gson.toJson(playerInfo));
+                    JsonObject response = new JsonObject();
+                    response.add("achievements", gson.toJsonTree(stats.get("achievements")));
+                    sendResponse(exchange, 200, gson.toJson(response));
                 } catch (IllegalArgumentException e) {
                     sendResponse(exchange, 400, gson.toJson(Map.of("error", "Invalid UUID format")));
                 }

@@ -1,71 +1,80 @@
 package com.example;
 
-import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.event.Listener;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.ChatColor;
-import org.bukkit.configuration.file.FileConfiguration;
 import com.example.api.ServerAPI;
+import com.example.database.DatabaseManager;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class ShotPL extends JavaPlugin implements Listener {
-    
-    private FileConfiguration config;
     private ServerAPI api;
-    
+    private DatabaseManager databaseManager;
+
     @Override
     public void onEnable() {
-        // Save default config if it doesn't exist
+        // Save default config
         saveDefaultConfig();
-        // Load config
-        config = getConfig();
-        
+
+        // Initialize database
+        databaseManager = new DatabaseManager(this);
+
         // Register events
         getServer().getPluginManager().registerEvents(this, this);
-        
-        // Initialize and start API if enabled
-        if (config.getBoolean("api.enabled", true)) {
+
+        // Start API server if enabled
+        if (getConfig().getBoolean("api.enabled", true)) {
             api = new ServerAPI(this);
             api.start();
         }
-        
-        // Show stylish console message
-        getLogger().info("§8§m----------------------------------------");
-        getLogger().info("§b§lShot-PL §7is now running!");
-        getLogger().info("§7Version: §f" + getDescription().getVersion());
-        getLogger().info("§7Author: §f" + getDescription().getAuthors().get(0));
-        if (config.getBoolean("api.enabled", true)) {
-            getLogger().info("§7API: §aEnabled on port " + config.getInt("api.port", 8080));
-        }
-        getLogger().info("§8§m----------------------------------------");
+
+        // Log startup message
+        getLogger().info("§a§lShot-PL §7» §fPlugin has been enabled!");
+        getLogger().info("§a§lShot-PL §7» §fVersion: " + getDescription().getVersion());
     }
-    
+
     @Override
     public void onDisable() {
-        // Stop API if it was started
+        // Stop API server if running
         if (api != null) {
             api.stop();
         }
-        
-        // Log that the plugin has been disabled
-        getLogger().info("§8§m----------------------------------------");
-        getLogger().info("§b§lShot-PL §7has been disabled!");
-        getLogger().info("§8§m----------------------------------------");
+
+        // Close database connection
+        if (databaseManager != null) {
+            databaseManager.close();
+        }
+
+        // Log shutdown message
+        getLogger().info("§c§lShot-PL §7» §fPlugin has been disabled!");
     }
-    
+
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // Check if welcome message is enabled
-        if (config.getBoolean("welcome.enabled", true)) {
-            // Get the welcome message from config
-            String message = config.getString("welcome.message", "§b§lShot-PL §7» §fWelcome to Shot-PL server!");
-            
-            // Replace placeholders
-            message = message.replace("{player}", event.getPlayer().getName())
-                           .replace("{server}", getServer().getName());
-            
-            // Send the message
-            event.getPlayer().sendMessage(message);
+        Player player = event.getPlayer();
+        
+        // Record player login
+        databaseManager.recordPlayerLogin(player);
+
+        // Send welcome message if enabled
+        if (getConfig().getBoolean("welcome.enabled", true)) {
+            String message = getConfig().getString("welcome.message", "§b§lShot-PL §7» §fWelcome {player} to the server!")
+                    .replace("{player}", player.getName())
+                    .replace("{server}", Bukkit.getServer().getName());
+            player.sendMessage(message);
         }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Record player logout
+        databaseManager.recordPlayerLogout(event.getPlayer());
+    }
+
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 } 
