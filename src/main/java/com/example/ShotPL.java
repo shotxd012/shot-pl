@@ -1,11 +1,15 @@
 package com.example;
 
 import com.example.api.ServerAPI;
+import com.example.commands.LeaderboardCommand;
+import com.example.commands.StatsCommand;
 import com.example.database.DatabaseManager;
+import com.example.gui.StatsGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -13,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class ShotPL extends JavaPlugin implements Listener {
     private ServerAPI api;
     private DatabaseManager databaseManager;
+    private StatsGUI statsGUI;
 
     @Override
     public void onEnable() {
@@ -22,8 +27,15 @@ public class ShotPL extends JavaPlugin implements Listener {
         // Initialize database
         databaseManager = new DatabaseManager(this);
 
+        // Initialize GUI
+        statsGUI = new StatsGUI(this);
+
         // Register events
         getServer().getPluginManager().registerEvents(this, this);
+
+        // Register commands
+        getCommand("stats").setExecutor(new StatsCommand(this));
+        getCommand("leaderboard").setExecutor(new LeaderboardCommand(this));
 
         // Start API server if enabled
         if (getConfig().getBoolean("api.enabled", true)) {
@@ -74,7 +86,23 @@ public class ShotPL extends JavaPlugin implements Listener {
         databaseManager.recordPlayerLogout(event.getPlayer());
     }
 
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getView().getTitle().startsWith("Stats: ")) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType().name().contains("HEAD")) {
+                // Refresh stats when clicking the player head
+                statsGUI.openStatsGUI((Player) event.getWhoClicked(), 
+                    Bukkit.getPlayer(event.getView().getTitle().substring(7)));
+            }
+        }
+    }
+
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public StatsGUI getStatsGUI() {
+        return statsGUI;
     }
 } 

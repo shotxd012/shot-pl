@@ -4,3 +4,23 @@ main: com.example.ShotPL
 api-version: '1.20'
 description: A Minecraft plugin for shot-pl
 author: SHOTXD 
+
+commands:
+  stats:
+    description: View player statistics
+    usage: /stats [player]
+    permission: shotpl.stats
+    aliases: [playerstats, pstats]
+  leaderboard:
+    description: View server leaderboards
+    usage: /leaderboard [category]
+    permission: shotpl.leaderboard
+    aliases: [lb, top]
+
+permissions:
+  shotpl.stats:
+    description: Allows using the /stats command
+    default: true
+  shotpl.leaderboard:
+    description: Allows using the /leaderboard command
+    default: true 
