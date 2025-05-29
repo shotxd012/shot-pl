@@ -9,6 +9,9 @@ import spark.Spark;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import com.example.ShotPL;
+import org.bukkit.Server;
+import org.bukkit.craftbukkit.v1_20_R3.CraftServer;
 
 public class ServerAPI {
     private final ShotPL plugin;
@@ -44,17 +47,24 @@ public class ServerAPI {
             JsonObject status = new JsonObject();
             
             // Basic server info
-            status.addProperty("server_name", Bukkit.getServerName());
-            status.addProperty("version", Bukkit.getVersion());
-            status.addProperty("online_players", Bukkit.getOnlinePlayers().size());
-            status.addProperty("max_players", Bukkit.getMaxPlayers());
+            Server server = Bukkit.getServer();
+            status.addProperty("server_name", server.getName());
+            status.addProperty("version", server.getVersion());
+            status.addProperty("online_players", server.getOnlinePlayers().size());
+            status.addProperty("max_players", server.getMaxPlayers());
             status.addProperty("uptime", getUptime());
             
             // TPS (Ticks Per Second)
-            double[] tps = Bukkit.getTPS();
-            status.addProperty("tps_1m", String.format("%.2f", tps[0]));
-            status.addProperty("tps_5m", String.format("%.2f", tps[1]));
-            status.addProperty("tps_15m", String.format("%.2f", tps[2]));
+            if (server instanceof CraftServer) {
+                double[] tps = ((CraftServer) server).getServer().getAverageTickTime();
+                status.addProperty("tps_1m", String.format("%.2f", 1000.0 / tps[0]));
+                status.addProperty("tps_5m", String.format("%.2f", 1000.0 / tps[1]));
+                status.addProperty("tps_15m", String.format("%.2f", 1000.0 / tps[2]));
+            } else {
+                status.addProperty("tps_1m", "N/A");
+                status.addProperty("tps_5m", "N/A");
+                status.addProperty("tps_15m", "N/A");
+            }
             
             // Memory usage
             Runtime runtime = Runtime.getRuntime();
@@ -63,7 +73,7 @@ public class ServerAPI {
             
             // Online players list
             JsonObject players = new JsonObject();
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            for (Player player : server.getOnlinePlayers()) {
                 JsonObject playerInfo = new JsonObject();
                 playerInfo.addProperty("name", player.getName());
                 playerInfo.addProperty("uuid", player.getUniqueId().toString());
