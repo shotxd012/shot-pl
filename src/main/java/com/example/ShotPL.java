@@ -6,10 +6,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
+import com.example.api.ServerAPI;
 
 public class ShotPL extends JavaPlugin implements Listener {
     
     private FileConfiguration config;
+    private ServerAPI api;
     
     @Override
     public void onEnable() {
@@ -21,16 +23,30 @@ public class ShotPL extends JavaPlugin implements Listener {
         // Register events
         getServer().getPluginManager().registerEvents(this, this);
         
+        // Initialize and start API if enabled
+        if (config.getBoolean("api.enabled", true)) {
+            api = new ServerAPI(this);
+            api.start();
+        }
+        
         // Show stylish console message
         getLogger().info("§8§m----------------------------------------");
         getLogger().info("§b§lShot-PL §7is now running!");
         getLogger().info("§7Version: §f" + getDescription().getVersion());
         getLogger().info("§7Author: §f" + getDescription().getAuthors().get(0));
+        if (config.getBoolean("api.enabled", true)) {
+            getLogger().info("§7API: §aEnabled on port " + config.getInt("api.port", 8080));
+        }
         getLogger().info("§8§m----------------------------------------");
     }
     
     @Override
     public void onDisable() {
+        // Stop API if it was started
+        if (api != null) {
+            api.stop();
+        }
+        
         // Log that the plugin has been disabled
         getLogger().info("§8§m----------------------------------------");
         getLogger().info("§b§lShot-PL §7has been disabled!");

@@ -8,4 +8,15 @@ welcome:
   # Available placeholders:
   # {player} - Player's name
   # {server} - Server name
-  message: "§b§lShot-PL §7» §fWelcome {player} to Shot-PL server!" 
+  message: "§b§lShot-PL §7» §fWelcome {player} to Shot-PL server!"
+
+# API settings
+api:
+  # Enable or disable the API
+  enabled: true
+  # The port the API will run on
+  port: 8080
+  # API authentication (optional)
+  auth:
+    enabled: false
+    token: "your-secret-token-here" 
