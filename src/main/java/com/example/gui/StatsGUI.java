@@ -72,7 +72,7 @@ public class StatsGUI {
             String.valueOf(target.getStatistic(Statistic.JUMP)));
         addStatItem(gui, 39, Material.ENDER_PEARL, "Teleports",
             String.valueOf(target.getStatistic(Statistic.ENDER_PEARL_THROWN)));
-        addStatItem(gui, 40, Material.BOAT, "Boats Used",
+        addStatItem(gui, 40, Material.OAK_BOAT, "Boats Used",
             String.valueOf(target.getStatistic(Statistic.BOAT_ONE_CM) / 100));
 
         // Item Stats
@@ -89,15 +89,16 @@ public class StatsGUI {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> achievements = (List<Map<String, Object>>) stats.get("achievements");
         if (achievements != null && !achievements.isEmpty()) {
-            ItemStack achievementItem = new ItemStack(Material.TROPHY);
+            ItemStack achievementItem = new ItemStack(Material.GOLDEN_CROWN);
             ItemMeta meta = achievementItem.getItemMeta();
             meta.setDisplayName(ChatColor.GOLD + "Achievements");
             List<String> lore = new ArrayList<>();
             for (Map<String, Object> achievement : achievements) {
-                lore.add(ChatColor.GRAY + "• " + achievement.get("id") + " - " +
-                    (Boolean.TRUE.equals(achievement.get("completed")) ? 
-                        ChatColor.GREEN + "Completed" : 
-                        ChatColor.YELLOW + achievement.get("progress") + "%"));
+                String achievementId = achievement.get("id").toString();
+                String progress = Boolean.TRUE.equals(achievement.get("completed")) ? 
+                    ChatColor.GREEN + "Completed" : 
+                    ChatColor.YELLOW + achievement.get("progress") + "%";
+                lore.add(ChatColor.GRAY + "• " + achievementId + " - " + progress);
             }
             meta.setLore(lore);
             achievementItem.setItemMeta(meta);
