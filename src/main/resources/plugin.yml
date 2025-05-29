@@ -1,6 +1,6 @@
-name: MinecraftPlugin
+name: Shot-PL
 version: '${project.version}'
 main: com.example.MinecraftPlugin
 api-version: '1.20'
-description: A basic Minecraft plugin
+description: A Minecraft plugin for shot-pl
 author: YourName 

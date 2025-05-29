@@ -1,6 +1,6 @@
-# Minecraft Plugin
+# Shot-PL
 
-A basic Minecraft plugin that demonstrates fundamental plugin development concepts.
+A Minecraft plugin for shot-pl server with basic functionality.
 
 ## Features
 
@@ -21,7 +21,7 @@ To build the plugin, run:
 mvn clean package
 ```
 
-The compiled plugin will be in the `target` directory as `minecraft-plugin-1.0-SNAPSHOT.jar`
+The compiled plugin will be in the `target` directory as `shot-pl-1.0-SNAPSHOT.jar`
 
 ## Installation
 
