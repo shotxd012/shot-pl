@@ -68,6 +68,11 @@ public class ShotPL extends JavaPlugin implements Listener {
         // Record player login
         databaseManager.recordPlayerLogin(player);
 
+        // Update player status on join
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            databaseManager.updatePlayerStatus(player);
+        }, 20L); // Delay by 1 second to ensure player is fully loaded
+
         // Send welcome message if enabled
         if (getConfig().getBoolean("welcome.enabled", true)) {
             String message = getConfig().getString("welcome.message", "§b§lShot-PL §7» §fWelcome {player} to the server!")

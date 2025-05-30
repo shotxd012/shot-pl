@@ -65,6 +65,28 @@ public class DatabaseManager {
                     "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
                     "UNIQUE(player_uuid)" +
                     ")");
+
+                // Player status table for storing last known player state
+                stmt.execute("CREATE TABLE IF NOT EXISTS player_status (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "player_uuid TEXT NOT NULL," +
+                    "player_name TEXT NOT NULL," +
+                    "health REAL DEFAULT 20," +
+                    "max_health REAL DEFAULT 20," +
+                    "food_level INTEGER DEFAULT 20," +
+                    "saturation REAL DEFAULT 5," +
+                    "game_mode TEXT DEFAULT 'SURVIVAL'," +
+                    "level INTEGER DEFAULT 0," +
+                    "exp REAL DEFAULT 0," +
+                    "total_experience INTEGER DEFAULT 0," +
+                    "location_x REAL DEFAULT 0," +
+                    "location_y REAL DEFAULT 64," +
+                    "location_z REAL DEFAULT 0," +
+                    "world_name TEXT DEFAULT 'world'," +
+                    "ping INTEGER DEFAULT 0," +
+                    "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE(player_uuid)" +
+                    ")");
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
@@ -95,8 +117,38 @@ public class DatabaseManager {
             plugin.getLogger().severe("Failed to record player logout: " + e.getMessage());
         }
         
-        // Update player statistics when they logout
+        // Update player statistics and status when they logout
         updatePlayerStatistics(player);
+        updatePlayerStatus(player);
+    }
+
+    public void updatePlayerStatus(Player player) {
+        String sql = "INSERT OR REPLACE INTO player_status (" +
+                    "player_uuid, player_name, health, max_health, food_level, saturation, " +
+                    "game_mode, level, exp, total_experience, location_x, location_y, location_z, " +
+                    "world_name, ping, last_updated) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.setString(2, player.getName());
+            pstmt.setDouble(3, player.getHealth());
+            pstmt.setDouble(4, player.getMaxHealth());
+            pstmt.setInt(5, player.getFoodLevel());
+            pstmt.setDouble(6, player.getSaturation());
+            pstmt.setString(7, player.getGameMode().toString());
+            pstmt.setInt(8, player.getLevel());
+            pstmt.setDouble(9, player.getExp());
+            pstmt.setInt(10, player.getTotalExperience());
+            pstmt.setDouble(11, player.getLocation().getX());
+            pstmt.setDouble(12, player.getLocation().getY());
+            pstmt.setDouble(13, player.getLocation().getZ());
+            pstmt.setString(14, player.getWorld().getName());
+            pstmt.setInt(15, player.getPing());
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to update player status: " + e.getMessage());
+        }
     }
 
     public void updatePlayerStatistics(Player player) {
@@ -109,24 +161,44 @@ public class DatabaseManager {
         
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
-            pstmt.setInt(2, player.getStatistic(org.bukkit.Statistic.MINE_BLOCK));
-            pstmt.setInt(3, player.getStatistic(org.bukkit.Statistic.USE_ITEM));
-            pstmt.setInt(4, player.getStatistic(org.bukkit.Statistic.DEATHS));
-            pstmt.setInt(5, player.getStatistic(org.bukkit.Statistic.PLAYER_KILLS));
-            pstmt.setInt(6, player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM));
-            pstmt.setInt(7, player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM));
-            pstmt.setInt(8, player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM));
-            pstmt.setInt(9, player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
-            pstmt.setInt(10, player.getStatistic(org.bukkit.Statistic.JUMP));
-            pstmt.setInt(11, player.getStatistic(org.bukkit.Statistic.ANIMALS_BRED));
-            pstmt.setInt(12, player.getStatistic(org.bukkit.Statistic.DAMAGE_TAKEN));
-            pstmt.setInt(13, player.getStatistic(org.bukkit.Statistic.DAMAGE_DEALT));
-            pstmt.setInt(14, player.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
-            pstmt.setInt(15, player.getStatistic(org.bukkit.Statistic.DROP));
-            pstmt.setInt(16, player.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+            
+            // Safe statistic retrieval with try-catch for each
+            pstmt.setInt(2, getSafeStat(player, org.bukkit.Statistic.MINE_BLOCK));
+            pstmt.setInt(3, getSafeStat(player, org.bukkit.Statistic.USE_ITEM, org.bukkit.Material.DIRT)); // Use dirt as default material
+            pstmt.setInt(4, getSafeStat(player, org.bukkit.Statistic.DEATHS));
+            pstmt.setInt(5, getSafeStat(player, org.bukkit.Statistic.PLAYER_KILLS));
+            pstmt.setInt(6, getSafeStat(player, org.bukkit.Statistic.WALK_ONE_CM));
+            pstmt.setInt(7, getSafeStat(player, org.bukkit.Statistic.SPRINT_ONE_CM));
+            pstmt.setInt(8, getSafeStat(player, org.bukkit.Statistic.SWIM_ONE_CM));
+            pstmt.setInt(9, getSafeStat(player, org.bukkit.Statistic.FLY_ONE_CM));
+            pstmt.setInt(10, getSafeStat(player, org.bukkit.Statistic.JUMP));
+            pstmt.setInt(11, getSafeStat(player, org.bukkit.Statistic.ANIMALS_BRED));
+            pstmt.setInt(12, getSafeStat(player, org.bukkit.Statistic.DAMAGE_TAKEN));
+            pstmt.setInt(13, getSafeStat(player, org.bukkit.Statistic.DAMAGE_DEALT));
+            pstmt.setInt(14, getSafeStat(player, org.bukkit.Statistic.FISH_CAUGHT));
+            pstmt.setInt(15, getSafeStat(player, org.bukkit.Statistic.DROP));
+            pstmt.setInt(16, getSafeStat(player, org.bukkit.Statistic.MOB_KILLS));
             pstmt.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to update player statistics: " + e.getMessage());
+        }
+    }
+
+    private int getSafeStat(Player player, org.bukkit.Statistic statistic) {
+        try {
+            return player.getStatistic(statistic);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to get statistic " + statistic.name() + " for player " + player.getName() + ": " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private int getSafeStat(Player player, org.bukkit.Statistic statistic, org.bukkit.Material material) {
+        try {
+            return player.getStatistic(statistic, material);
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to get statistic " + statistic.name() + " with material " + material.name() + " for player " + player.getName() + ": " + e.getMessage());
+            return 0;
         }
     }
 
@@ -262,6 +334,33 @@ public class DatabaseManager {
                         sessions.add(session);
                     }
                     playerData.put("recent_sessions", sessions);
+                }
+
+                // Get last known player status for offline players
+                if (onlinePlayer == null) {
+                    String statusSql = "SELECT * FROM player_status WHERE player_uuid = ?";
+                    try (PreparedStatement pstmt = connection.prepareStatement(statusSql)) {
+                        pstmt.setString(1, rs.getString("player_uuid"));
+                        ResultSet statusRs = pstmt.executeQuery();
+                        if (statusRs.next()) {
+                            playerData.put("health", statusRs.getDouble("health"));
+                            playerData.put("max_health", statusRs.getDouble("max_health"));
+                            playerData.put("food_level", statusRs.getInt("food_level"));
+                            playerData.put("saturation", statusRs.getDouble("saturation"));
+                            playerData.put("game_mode", statusRs.getString("game_mode"));
+                            playerData.put("level", statusRs.getInt("level"));
+                            playerData.put("exp", statusRs.getDouble("exp"));
+                            playerData.put("total_experience", statusRs.getInt("total_experience"));
+                            playerData.put("location", Arrays.asList(
+                                statusRs.getDouble("location_x"),
+                                statusRs.getDouble("location_y"),
+                                statusRs.getDouble("location_z")
+                            ));
+                            playerData.put("world", statusRs.getString("world_name"));
+                            playerData.put("ping", statusRs.getInt("ping"));
+                            playerData.put("last_updated", statusRs.getString("last_updated"));
+                        }
+                    }
                 }
                 
                 playersData.add(playerData);
