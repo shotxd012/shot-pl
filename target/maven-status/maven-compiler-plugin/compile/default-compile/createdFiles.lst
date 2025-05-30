@@ -1,6 +1,4 @@
-com/example/gui/StatsGUI.class
 com/example/ShotPL.class
 com/example/database/DatabaseManager.class
 com/example/commands/LeaderboardCommand.class
 com/example/api/ServerAPI.class
-com/example/commands/StatsCommand.class
