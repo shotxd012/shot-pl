@@ -336,8 +336,30 @@ public class DatabaseManager {
                     playerData.put("recent_sessions", sessions);
                 }
 
-                // Get last known player status for offline players
-                if (onlinePlayer == null) {
+                // Check if player is currently online
+                org.bukkit.entity.Player onlinePlayer = org.bukkit.Bukkit.getPlayer(java.util.UUID.fromString(rs.getString("player_uuid")));
+                playerData.put("is_online", onlinePlayer != null);
+                
+                if (onlinePlayer != null) {
+                    // Player is online - get live data
+                    playerData.put("health", onlinePlayer.getHealth());
+                    playerData.put("max_health", onlinePlayer.getMaxHealth());
+                    playerData.put("food_level", onlinePlayer.getFoodLevel());
+                    playerData.put("saturation", onlinePlayer.getSaturation());
+                    playerData.put("game_mode", onlinePlayer.getGameMode().toString());
+                    playerData.put("level", onlinePlayer.getLevel());
+                    playerData.put("exp", onlinePlayer.getExp());
+                    playerData.put("total_experience", onlinePlayer.getTotalExperience());
+                    playerData.put("location", Arrays.asList(
+                        onlinePlayer.getLocation().getX(),
+                        onlinePlayer.getLocation().getY(),
+                        onlinePlayer.getLocation().getZ()
+                    ));
+                    playerData.put("world", onlinePlayer.getWorld().getName());
+                    playerData.put("ping", onlinePlayer.getPing());
+                    playerData.put("last_played", onlinePlayer.getLastPlayed());
+                } else {
+                    // Player is offline - get last known status from database
                     String statusSql = "SELECT * FROM player_status WHERE player_uuid = ?";
                     try (PreparedStatement pstmt = connection.prepareStatement(statusSql)) {
                         pstmt.setString(1, rs.getString("player_uuid"));
