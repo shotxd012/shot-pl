@@ -67,22 +67,22 @@ public class StatsGUI {
             String.valueOf(target.getStatistic(Statistic.WALK_ONE_CM) / 100) + " blocks");
         addStatItem(gui, 38, Material.DIAMOND_BOOTS, "Distance Sprinted",
             String.valueOf(target.getStatistic(Statistic.SPRINT_ONE_CM) / 100) + " blocks");
-        addStatItem(gui, 39, Material.BOAT, "Distance Swum",
+        addStatItem(gui, 39, Material.OAK_BOAT, "Distance Swum",
             String.valueOf(target.getStatistic(Statistic.SWIM_ONE_CM) / 100) + " blocks");
-        addStatItem(gui, 40, Material.PICKAXE, "Jump Count",
+        addStatItem(gui, 40, Material.DIAMOND_PICKAXE, "Jump Count",
             String.valueOf(target.getStatistic(Statistic.JUMP)));
         addStatItem(gui, 41, Material.GOLDEN_APPLE, "Animals Bred",
             String.valueOf(target.getStatistic(Statistic.ANIMALS_BRED)));
 
         // Item Stats
-        addStatItem(gui, 46, Material.DIAMOND_PICKAXE, "Blocks Broken",
-            String.valueOf(target.getStatistic(Statistic.BREAK_ITEM)));
-        addStatItem(gui, 47, Material.GRASS_BLOCK, "Blocks Placed",
-            String.valueOf(target.getStatistic(Statistic.USE_ITEM)));
-        addStatItem(gui, 48, Material.CHEST, "Items Crafted",
-            String.valueOf(target.getStatistic(Statistic.CRAFT_ITEM)));
-        addStatItem(gui, 49, Material.FURNACE, "Items Smelted",
-            String.valueOf(target.getStatistic(Statistic.USE_ITEM)));
+        addStatItem(gui, 46, Material.DIAMOND_PICKAXE, "Mob Kills",
+            String.valueOf(target.getStatistic(Statistic.MOB_KILLS)));
+        addStatItem(gui, 47, Material.GRASS_BLOCK, "Fish Caught",
+            String.valueOf(target.getStatistic(Statistic.FISH_CAUGHT)));
+        addStatItem(gui, 48, Material.CHEST, "Items Dropped",
+            String.valueOf(target.getStatistic(Statistic.DROP)));
+        addStatItem(gui, 49, Material.FURNACE, "Items Picked Up",
+            String.valueOf(target.getStatistic(Statistic.PICKUP)));
 
         // Achievements
         @SuppressWarnings("unchecked")
