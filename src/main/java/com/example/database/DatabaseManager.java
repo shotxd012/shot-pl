@@ -63,9 +63,10 @@ public class DatabaseManager {
         String sql = "UPDATE player_sessions SET logout_time = CURRENT_TIMESTAMP, " +
                     "session_duration = (strftime('%s', CURRENT_TIMESTAMP) - strftime('%s', login_time)) * 1000 " +
                     "WHERE player_uuid = ? AND logout_time IS NULL " +
-                    "ORDER BY login_time DESC LIMIT 1";
+                    "AND id = (SELECT id FROM player_sessions WHERE player_uuid = ? AND logout_time IS NULL ORDER BY login_time DESC LIMIT 1)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.setString(2, player.getUniqueId().toString());
             pstmt.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to record player logout: " + e.getMessage());
