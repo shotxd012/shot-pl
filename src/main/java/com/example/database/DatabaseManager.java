@@ -162,21 +162,27 @@ public class DatabaseManager {
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, player.getUniqueId().toString());
             
-            // Safe statistic retrieval with try-catch for each
+            // Block statistics
             pstmt.setInt(2, getSafeStat(player, org.bukkit.Statistic.MINE_BLOCK));
-            pstmt.setInt(3, getSafeStat(player, org.bukkit.Statistic.USE_ITEM, org.bukkit.Material.DIRT)); // Use dirt as default material
+            pstmt.setInt(3, getSafeStatTotal(player, org.bukkit.Statistic.USE_ITEM));
+            
+            // Combat statistics
             pstmt.setInt(4, getSafeStat(player, org.bukkit.Statistic.DEATHS));
             pstmt.setInt(5, getSafeStat(player, org.bukkit.Statistic.PLAYER_KILLS));
+            
+            // Movement statistics
             pstmt.setInt(6, getSafeStat(player, org.bukkit.Statistic.WALK_ONE_CM));
             pstmt.setInt(7, getSafeStat(player, org.bukkit.Statistic.SPRINT_ONE_CM));
             pstmt.setInt(8, getSafeStat(player, org.bukkit.Statistic.SWIM_ONE_CM));
             pstmt.setInt(9, getSafeStat(player, org.bukkit.Statistic.FLY_ONE_CM));
             pstmt.setInt(10, getSafeStat(player, org.bukkit.Statistic.JUMP));
+            
+            // Activity statistics
             pstmt.setInt(11, getSafeStat(player, org.bukkit.Statistic.ANIMALS_BRED));
             pstmt.setInt(12, getSafeStat(player, org.bukkit.Statistic.DAMAGE_TAKEN));
             pstmt.setInt(13, getSafeStat(player, org.bukkit.Statistic.DAMAGE_DEALT));
             pstmt.setInt(14, getSafeStat(player, org.bukkit.Statistic.FISH_CAUGHT));
-            pstmt.setInt(15, getSafeStat(player, org.bukkit.Statistic.DROP));
+            pstmt.setInt(15, getSafeStatTotal(player, org.bukkit.Statistic.CRAFT_ITEM));
             pstmt.setInt(16, getSafeStat(player, org.bukkit.Statistic.MOB_KILLS));
             pstmt.executeUpdate();
         } catch (SQLException e) {
@@ -198,6 +204,30 @@ public class DatabaseManager {
             return player.getStatistic(statistic, material);
         } catch (Exception e) {
             plugin.getLogger().warning("Failed to get statistic " + statistic.name() + " with material " + material.name() + " for player " + player.getName() + ": " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private int getSafeStatTotal(Player player, org.bukkit.Statistic statistic) {
+        try {
+            // For statistics that require materials/entities, we need to sum across all types
+            if (statistic == org.bukkit.Statistic.USE_ITEM || statistic == org.bukkit.Statistic.CRAFT_ITEM) {
+                int total = 0;
+                for (org.bukkit.Material material : org.bukkit.Material.values()) {
+                    if (material.isItem()) {
+                        try {
+                            total += player.getStatistic(statistic, material);
+                        } catch (Exception ignored) {
+                            // Some materials might not be valid for this statistic
+                        }
+                    }
+                }
+                return total;
+            } else {
+                return player.getStatistic(statistic);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().warning("Failed to get total statistic " + statistic.name() + " for player " + player.getName() + ": " + e.getMessage());
             return 0;
         }
     }
@@ -392,6 +422,20 @@ public class DatabaseManager {
         }
         
         return playersData;
+    }
+
+    public UUID getPlayerUuidByName(String playerName) {
+        String sql = "SELECT player_uuid FROM player_sessions WHERE player_name = ? ORDER BY login_time DESC LIMIT 1";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, playerName);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return UUID.fromString(rs.getString("player_uuid"));
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get player UUID by name: " + e.getMessage());
+        }
+        return null;
     }
 
     public void close() {
