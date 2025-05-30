@@ -1,0 +1,65 @@
+~/workspace$ mvn clean package
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.example:shot-pl >-------------------------
+[INFO] Building Shot-PL 1.1.4
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ shot-pl ---
+[INFO] Deleting /home/runner/workspace/target
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ shot-pl ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:compile (default-compile) @ shot-pl ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 6 source files with javac [debug release 17] to target/classes
+[INFO] /home/runner/workspace/src/main/java/com/example/commands/LeaderboardCommand.java: Some input files use or override a deprecated API.
+[INFO] /home/runner/workspace/src/main/java/com/example/commands/LeaderboardCommand.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ shot-pl ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory /home/runner/workspace/src/test/resources
+[INFO] 
+[INFO] --- maven-compiler-plugin:3.11.0:testCompile (default-testCompile) @ shot-pl ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- maven-surefire-plugin:2.12.4:test (default-test) @ shot-pl ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ shot-pl ---
+[INFO] Building jar: /home/runner/workspace/target/shot-pl-1.1.4.jar
+[INFO] 
+[INFO] --- maven-shade-plugin:3.5.0:shade (default) @ shot-pl ---
+[INFO] Including org.xerial:sqlite-jdbc:jar:3.47.0.0 in the shaded jar.
+[INFO] Including com.google.code.gson:gson:jar:2.10.1 in the shaded jar.
+[INFO] Minimizing jar com.example:shot-pl:jar:1.1.4
+[WARNING] gson-2.10.1.jar, shot-pl-1.1.4.jar, sqlite-jdbc-3.47.0.0.jar define 1 overlapping resource: 
+[WARNING]   - META-INF/MANIFEST.MF
+[WARNING] gson-2.10.1.jar, sqlite-jdbc-3.47.0.0.jar define 1 overlapping classes: 
+[WARNING]   - META-INF.versions.9.module-info
+[WARNING] maven-shade-plugin has detected that some files are
+[WARNING] present in two or more JARs. When this happens, only one
+[WARNING] single version of the file is copied to the uber jar.
+[WARNING] Usually this is not harmful and you can skip these warnings,
+[WARNING] otherwise try to manually exclude artifacts based on
+[WARNING] mvn dependency:tree -Ddetail=true and the above output.
+[WARNING] See https://maven.apache.org/plugins/maven-shade-plugin/
+[INFO] Minimized 392 -> 264 (67%)
+[INFO] Replacing original artifact with shaded artifact.
+[INFO] Replacing /home/runner/workspace/target/shot-pl-1.1.4.jar with /home/runner/workspace/target/shot-pl-1.1.4-shaded.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  20.997 s
+[INFO] Finished at: 2025-05-30T06:24:10Z
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-shade-plugin:3.5.0:shade (default) on project shot-pl: Error creating shaded jar: Could not replace original artifact with shaded artifact!: /home/runner/workspace/target/shot-pl-1.1.4-shaded.jar -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+~/workspace$ 
