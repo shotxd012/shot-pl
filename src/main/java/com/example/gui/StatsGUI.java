@@ -63,17 +63,16 @@ public class StatsGUI {
             String.valueOf(target.getStatistic(Statistic.DAMAGE_TAKEN)));
 
         // Movement Stats
-        addStatItem(gui, 37, Material.ELYTRA, "Distance Traveled",
-            String.format("%.1f blocks", 
-                target.getStatistic(Statistic.WALK_ONE_CM) / 100.0 +
-                target.getStatistic(Statistic.SPRINT_ONE_CM) / 100.0 +
-                target.getStatistic(Statistic.SWIM_ONE_CM) / 100.0));
-        addStatItem(gui, 38, Material.DIAMOND_BOOTS, "Jumps",
+        addStatItem(gui, 37, Material.LEATHER_BOOTS, "Distance Walked",
+            String.valueOf(target.getStatistic(Statistic.WALK_ONE_CM) / 100) + " blocks");
+        addStatItem(gui, 38, Material.DIAMOND_BOOTS, "Distance Sprinted",
+            String.valueOf(target.getStatistic(Statistic.SPRINT_ONE_CM) / 100) + " blocks");
+        addStatItem(gui, 39, Material.BOAT, "Distance Swum",
+            String.valueOf(target.getStatistic(Statistic.SWIM_ONE_CM) / 100) + " blocks");
+        addStatItem(gui, 40, Material.PICKAXE, "Jump Count",
             String.valueOf(target.getStatistic(Statistic.JUMP)));
-        addStatItem(gui, 39, Material.ENDER_PEARL, "Teleports",
-            String.valueOf(target.getStatistic(Statistic.USE_ITEM)));
-        addStatItem(gui, 40, Material.OAK_BOAT, "Boats Used",
-            String.valueOf(target.getStatistic(Statistic.BOAT_ONE_CM) / 100));
+        addStatItem(gui, 41, Material.GOLDEN_APPLE, "Animals Bred",
+            String.valueOf(target.getStatistic(Statistic.ANIMALS_BRED)));
 
         // Item Stats
         addStatItem(gui, 46, Material.DIAMOND_PICKAXE, "Blocks Broken",
@@ -127,7 +126,7 @@ public class StatsGUI {
         long minutes = seconds / 60;
         long hours = minutes / 60;
         long days = hours / 24;
-        
+
         return String.format("%dd %dh %dm", days, hours % 24, minutes % 60);
     }
-} 
+}

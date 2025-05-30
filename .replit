@@ -2,3 +2,15 @@ modules = ["java-graalvm22.3"]
 
 [nix]
 channel = "stable-24_05"
+
+[workflows]
+runButton = "Build and Package"
+
+[[workflows.workflow]]
+name = "Build and Package"
+author = 20507972
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mvn clean package"

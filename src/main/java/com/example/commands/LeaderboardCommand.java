@@ -77,23 +77,18 @@ public class LeaderboardCommand implements CommandExecutor, TabCompleter {
     private String getValue(Player player, String category) {
         switch (category) {
             case "kills":
-                return player.getStatistic(Statistic.PLAYER_KILLS) + " kills";
+                return String.valueOf(player.getStatistic(Statistic.PLAYER_KILLS));
             case "deaths":
-                return player.getStatistic(Statistic.DEATHS) + " deaths";
+                return String.valueOf(player.getStatistic(Statistic.DEATHS));
             case "playtime":
-                long playtime = (Long) plugin.getDatabaseManager()
-                    .getPlayerStats(player.getUniqueId())
-                    .getOrDefault("total_playtime", 0L);
+                long playtime = (Long) plugin.getDatabaseManager().getPlayerStats(player.getUniqueId()).getOrDefault("total_playtime", 0L);
                 return formatDuration(playtime);
-            case "blocks":
-                int blocks = player.getStatistic(Statistic.BREAK_ITEM) + 
-                            player.getStatistic(Statistic.USE_ITEM);
-                return blocks + " blocks";
+            case "jumps":
+                return String.valueOf(player.getStatistic(Statistic.JUMP));
             case "distance":
-                int distance = player.getStatistic(Statistic.WALK_ONE_CM) + 
-                              player.getStatistic(Statistic.SPRINT_ONE_CM) + 
-                              player.getStatistic(Statistic.SWIM_ONE_CM);
-                return String.format("%.1f blocks", distance / 100.0);
+                return String.valueOf((player.getStatistic(Statistic.WALK_ONE_CM) + 
+                    player.getStatistic(Statistic.SPRINT_ONE_CM) + 
+                    player.getStatistic(Statistic.SWIM_ONE_CM)) / 100) + " blocks";
             default:
                 return "0";
         }
@@ -104,7 +99,7 @@ public class LeaderboardCommand implements CommandExecutor, TabCompleter {
         long minutes = seconds / 60;
         long hours = minutes / 60;
         long days = hours / 24;
-        
+
         return String.format("%dd %dh %dm", days, hours % 24, minutes % 60);
     }
 
@@ -117,4 +112,4 @@ public class LeaderboardCommand implements CommandExecutor, TabCompleter {
         }
         return Collections.emptyList();
     }
-} 
+}
