@@ -164,6 +164,34 @@ public class ServerAPI {
                 }
 
                 List<Map<String, Object>> playersData = plugin.getDatabaseManager().getAllPlayersData();
+                
+                // Enhance player data with online status and additional information
+                for (Map<String, Object> playerData : playersData) {
+                    String uuid = (String) playerData.get("uuid");
+                    Player onlinePlayer = Bukkit.getPlayer(UUID.fromString(uuid));
+                    
+                    // Add online status
+                    playerData.put("is_online", onlinePlayer != null);
+                    
+                    // Add additional information for online players
+                    if (onlinePlayer != null) {
+                        playerData.put("health", onlinePlayer.getHealth());
+                        playerData.put("max_health", onlinePlayer.getMaxHealth());
+                        playerData.put("game_mode", onlinePlayer.getGameMode().toString());
+                        playerData.put("ping", onlinePlayer.getPing());
+                        playerData.put("location", Arrays.asList(
+                            onlinePlayer.getLocation().getX(),
+                            onlinePlayer.getLocation().getY(),
+                            onlinePlayer.getLocation().getZ()
+                        ));
+                        playerData.put("world", onlinePlayer.getWorld().getName());
+                        playerData.put("level", onlinePlayer.getLevel());
+                        playerData.put("exp", onlinePlayer.getExp());
+                        playerData.put("food_level", onlinePlayer.getFoodLevel());
+                        playerData.put("last_played", onlinePlayer.getLastPlayed());
+                    }
+                }
+                
                 sendResponse(exchange, 200, gson.toJson(playersData));
             });
 
