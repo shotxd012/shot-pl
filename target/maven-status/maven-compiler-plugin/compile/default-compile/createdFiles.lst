@@ -1,4 +1,3 @@
 com/example/ShotPL.class
-com/example/database/DatabaseManager.class
 com/example/commands/LeaderboardCommand.class
 com/example/api/ServerAPI.class
