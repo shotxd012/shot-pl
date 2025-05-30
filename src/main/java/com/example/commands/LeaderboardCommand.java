@@ -95,12 +95,13 @@ public class LeaderboardCommand implements CommandExecutor, TabCompleter {
     }
 
     private String formatDuration(long milliseconds) {
-        long seconds = milliseconds / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-        long days = hours / 24;
+        long totalSeconds = milliseconds / 1000;
+        long seconds = totalSeconds % 60;
+        long minutes = (totalSeconds / 60) % 60;
+        long hours = (totalSeconds / 3600) % 24;
+        long days = totalSeconds / 86400;
 
-        return String.format("%dd %dh %dm", days, hours % 24, minutes % 60);
+        return String.format("%dd %dh %dm %ds", days, hours, minutes, seconds);
     }
 
     @Override
