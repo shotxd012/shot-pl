@@ -42,6 +42,29 @@ public class DatabaseManager {
                     "completed_at TIMESTAMP," +
                     "UNIQUE(player_uuid, achievement_id)" +
                     ")");
+
+                // Player statistics table
+                stmt.execute("CREATE TABLE IF NOT EXISTS player_statistics (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "player_uuid TEXT NOT NULL," +
+                    "blocks_broken INTEGER DEFAULT 0," +
+                    "blocks_placed INTEGER DEFAULT 0," +
+                    "deaths INTEGER DEFAULT 0," +
+                    "kills INTEGER DEFAULT 0," +
+                    "distance_walked INTEGER DEFAULT 0," +
+                    "distance_sprinted INTEGER DEFAULT 0," +
+                    "distance_swum INTEGER DEFAULT 0," +
+                    "distance_flown INTEGER DEFAULT 0," +
+                    "jumps INTEGER DEFAULT 0," +
+                    "food_eaten INTEGER DEFAULT 0," +
+                    "damage_taken INTEGER DEFAULT 0," +
+                    "damage_dealt INTEGER DEFAULT 0," +
+                    "fish_caught INTEGER DEFAULT 0," +
+                    "items_crafted INTEGER DEFAULT 0," +
+                    "mobs_killed INTEGER DEFAULT 0," +
+                    "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                    "UNIQUE(player_uuid)" +
+                    ")");
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
@@ -70,6 +93,40 @@ public class DatabaseManager {
             pstmt.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to record player logout: " + e.getMessage());
+        }
+        
+        // Update player statistics when they logout
+        updatePlayerStatistics(player);
+    }
+
+    public void updatePlayerStatistics(Player player) {
+        String sql = "INSERT OR REPLACE INTO player_statistics (" +
+                    "player_uuid, blocks_broken, blocks_placed, deaths, kills, " +
+                    "distance_walked, distance_sprinted, distance_swum, distance_flown, " +
+                    "jumps, food_eaten, damage_taken, damage_dealt, fish_caught, " +
+                    "items_crafted, mobs_killed, last_updated) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, player.getUniqueId().toString());
+            pstmt.setInt(2, player.getStatistic(org.bukkit.Statistic.MINE_BLOCK));
+            pstmt.setInt(3, player.getStatistic(org.bukkit.Statistic.USE_ITEM));
+            pstmt.setInt(4, player.getStatistic(org.bukkit.Statistic.DEATHS));
+            pstmt.setInt(5, player.getStatistic(org.bukkit.Statistic.PLAYER_KILLS));
+            pstmt.setInt(6, player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM));
+            pstmt.setInt(7, player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM));
+            pstmt.setInt(8, player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM));
+            pstmt.setInt(9, player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
+            pstmt.setInt(10, player.getStatistic(org.bukkit.Statistic.JUMP));
+            pstmt.setInt(11, player.getStatistic(org.bukkit.Statistic.ANIMALS_BRED));
+            pstmt.setInt(12, player.getStatistic(org.bukkit.Statistic.DAMAGE_TAKEN));
+            pstmt.setInt(13, player.getStatistic(org.bukkit.Statistic.DAMAGE_DEALT));
+            pstmt.setInt(14, player.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
+            pstmt.setInt(15, player.getStatistic(org.bukkit.Statistic.DROP));
+            pstmt.setInt(16, player.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to update player statistics: " + e.getMessage());
         }
     }
 
@@ -132,6 +189,36 @@ public class DatabaseManager {
             stats.put("achievements", achievements);
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to get player achievements: " + e.getMessage());
+        }
+
+        // Get player statistics
+        String statisticsSql = "SELECT * FROM player_statistics WHERE player_uuid = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(statisticsSql)) {
+            pstmt.setString(1, playerUuid.toString());
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                Map<String, Object> statistics = new HashMap<>();
+                statistics.put("blocks_broken", rs.getInt("blocks_broken"));
+                statistics.put("blocks_placed", rs.getInt("blocks_placed"));
+                statistics.put("deaths", rs.getInt("deaths"));
+                statistics.put("kills", rs.getInt("kills"));
+                statistics.put("distance_walked", rs.getInt("distance_walked"));
+                statistics.put("distance_sprinted", rs.getInt("distance_sprinted"));
+                statistics.put("distance_swum", rs.getInt("distance_swum"));
+                statistics.put("distance_flown", rs.getInt("distance_flown"));
+                statistics.put("jumps", rs.getInt("jumps"));
+                statistics.put("food_eaten", rs.getInt("food_eaten"));
+                statistics.put("damage_taken", rs.getInt("damage_taken"));
+                statistics.put("damage_dealt", rs.getInt("damage_dealt"));
+                statistics.put("fish_caught", rs.getInt("fish_caught"));
+                statistics.put("items_crafted", rs.getInt("items_crafted"));
+                statistics.put("mobs_killed", rs.getInt("mobs_killed"));
+                statistics.put("total_distance", rs.getInt("distance_walked") + rs.getInt("distance_sprinted") + rs.getInt("distance_swum") + rs.getInt("distance_flown"));
+                statistics.put("last_updated", rs.getString("last_updated"));
+                stats.put("statistics", statistics);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().severe("Failed to get player statistics: " + e.getMessage());
         }
 
         return stats;

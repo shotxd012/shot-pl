@@ -146,7 +146,36 @@ public class ServerAPI {
                 ));
 
                 // Add player stats from database
-                response.putAll(plugin.getDatabaseManager().getPlayerStats(player.getUniqueId()));
+                Map<String, Object> playerStats = plugin.getDatabaseManager().getPlayerStats(player.getUniqueId());
+                response.putAll(playerStats);
+
+                // Add live Bukkit statistics
+                Map<String, Object> liveStats = new HashMap<>();
+                liveStats.put("blocks_broken_live", player.getStatistic(org.bukkit.Statistic.MINE_BLOCK));
+                liveStats.put("blocks_placed_live", player.getStatistic(org.bukkit.Statistic.USE_ITEM));
+                liveStats.put("deaths_live", player.getStatistic(org.bukkit.Statistic.DEATHS));
+                liveStats.put("kills_live", player.getStatistic(org.bukkit.Statistic.PLAYER_KILLS));
+                liveStats.put("mob_kills_live", player.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+                liveStats.put("jumps_live", player.getStatistic(org.bukkit.Statistic.JUMP));
+                liveStats.put("distance_walked_live", player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM));
+                liveStats.put("distance_sprinted_live", player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM));
+                liveStats.put("distance_swum_live", player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM));
+                liveStats.put("distance_flown_live", player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
+                liveStats.put("total_distance_live", player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM) + 
+                    player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM) + 
+                    player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM) + 
+                    player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
+                liveStats.put("damage_taken_live", player.getStatistic(org.bukkit.Statistic.DAMAGE_TAKEN));
+                liveStats.put("damage_dealt_live", player.getStatistic(org.bukkit.Statistic.DAMAGE_DEALT));
+                liveStats.put("fish_caught_live", player.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
+                liveStats.put("food_level", player.getFoodLevel());
+                liveStats.put("saturation", player.getSaturation());
+                liveStats.put("exhaustion", player.getExhaustion());
+                liveStats.put("level", player.getLevel());
+                liveStats.put("experience", player.getExp());
+                liveStats.put("total_experience", player.getTotalExperience());
+                
+                response.put("live_statistics", liveStats);
 
                 sendResponse(exchange, 200, gson.toJson(response));
             });
@@ -237,6 +266,85 @@ public class ServerAPI {
                     
                     JsonObject response = new JsonObject();
                     response.add("achievements", gson.toJsonTree(stats.get("achievements")));
+                    sendResponse(exchange, 200, gson.toJson(response));
+                } catch (IllegalArgumentException e) {
+                    sendResponse(exchange, 400, gson.toJson(Map.of("error", "Invalid UUID format")));
+                }
+            });
+
+            // Detailed player statistics endpoint
+            server.createContext("/api/player/detailed-stats/", exchange -> {
+                if (!checkAuth(exchange)) {
+                    sendResponse(exchange, 401, "Unauthorized");
+                    return;
+                }
+
+                String path = exchange.getRequestURI().getPath();
+                String uuid = path.substring("/api/player/detailed-stats/".length());
+                
+                try {
+                    Player player = Bukkit.getPlayer(UUID.fromString(uuid));
+                    Map<String, Object> response = new HashMap<>();
+                    
+                    if (player != null) {
+                        // Live player statistics
+                        response.put("is_online", true);
+                        response.put("name", player.getName());
+                        response.put("uuid", uuid);
+                        
+                        Map<String, Object> detailedStats = new HashMap<>();
+                        detailedStats.put("blocks_broken", player.getStatistic(org.bukkit.Statistic.MINE_BLOCK));
+                        detailedStats.put("blocks_placed", player.getStatistic(org.bukkit.Statistic.USE_ITEM));
+                        detailedStats.put("deaths", player.getStatistic(org.bukkit.Statistic.DEATHS));
+                        detailedStats.put("player_kills", player.getStatistic(org.bukkit.Statistic.PLAYER_KILLS));
+                        detailedStats.put("mob_kills", player.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+                        detailedStats.put("jumps", player.getStatistic(org.bukkit.Statistic.JUMP));
+                        detailedStats.put("distance_walked_cm", player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM));
+                        detailedStats.put("distance_sprinted_cm", player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM));
+                        detailedStats.put("distance_swum_cm", player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM));
+                        detailedStats.put("distance_flown_cm", player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
+                        detailedStats.put("total_distance_cm", player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM));
+                        detailedStats.put("total_distance_blocks", (player.getStatistic(org.bukkit.Statistic.WALK_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.SPRINT_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.SWIM_ONE_CM) + 
+                            player.getStatistic(org.bukkit.Statistic.FLY_ONE_CM)) / 100);
+                        detailedStats.put("damage_taken", player.getStatistic(org.bukkit.Statistic.DAMAGE_TAKEN));
+                        detailedStats.put("damage_dealt", player.getStatistic(org.bukkit.Statistic.DAMAGE_DEALT));
+                        detailedStats.put("fish_caught", player.getStatistic(org.bukkit.Statistic.FISH_CAUGHT));
+                        detailedStats.put("animals_bred", player.getStatistic(org.bukkit.Statistic.ANIMALS_BRED));
+                        detailedStats.put("items_dropped", player.getStatistic(org.bukkit.Statistic.DROP));
+                        detailedStats.put("items_picked_up", player.getStatistic(org.bukkit.Statistic.PICKUP));
+                        detailedStats.put("time_played_ticks", player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE));
+                        detailedStats.put("time_played_hours", player.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / 72000.0);
+                        
+                        // Player status
+                        detailedStats.put("health", player.getHealth());
+                        detailedStats.put("max_health", player.getMaxHealth());
+                        detailedStats.put("food_level", player.getFoodLevel());
+                        detailedStats.put("saturation", player.getSaturation());
+                        detailedStats.put("level", player.getLevel());
+                        detailedStats.put("experience", player.getExp());
+                        detailedStats.put("total_experience", player.getTotalExperience());
+                        
+                        response.put("detailed_statistics", detailedStats);
+                        
+                        // Also include database stats
+                        Map<String, Object> dbStats = plugin.getDatabaseManager().getPlayerStats(UUID.fromString(uuid));
+                        response.putAll(dbStats);
+                    } else {
+                        // Player is offline, get data from database only
+                        response.put("is_online", false);
+                        Map<String, Object> dbStats = plugin.getDatabaseManager().getPlayerStats(UUID.fromString(uuid));
+                        if (dbStats.isEmpty()) {
+                            sendResponse(exchange, 404, gson.toJson(Map.of("error", "Player not found")));
+                            return;
+                        }
+                        response.putAll(dbStats);
+                    }
+                    
                     sendResponse(exchange, 200, gson.toJson(response));
                 } catch (IllegalArgumentException e) {
                     sendResponse(exchange, 400, gson.toJson(Map.of("error", "Invalid UUID format")));

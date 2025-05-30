@@ -79,8 +79,9 @@ public class ShotPL extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        // Record player logout
-        databaseManager.recordPlayerLogout(event.getPlayer());
+        Player player = event.getPlayer();
+        databaseManager.recordPlayerLogout(player);
+        // Statistics are automatically updated in recordPlayerLogout method
     }
 
     public DatabaseManager getDatabaseManager() {
